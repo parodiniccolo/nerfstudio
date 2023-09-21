@@ -98,4 +98,10 @@ def outOfGamutClipping(I):
     return I
 
 def im2double(im):
-    return torch.tensor(im.permute(2, 0, 1).float() / 255.0).permute(1, 2, 0)
+    if im.dim() == 2:  # Grayscale image
+        return torch.tensor(im.float() / 255.0)
+    elif im.dim() == 3:  # RGB image
+        return im.permute(2, 0, 1).float() / 255.0
+    else:
+        raise ValueError("Unsupported image format. Expected 2 or 3 dimensions.")
+
