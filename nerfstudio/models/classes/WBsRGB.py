@@ -30,31 +30,31 @@ class WBsRGB:
         feature = torch.mm(hist_reshaped - self.encoderBias.t(), self.encoderWeights)
         return feature
 
-  def rgb_uv_hist(self, image):
-      if image.dim() == 3:
-          sz = image.shape
-          if sz[0] * sz[1] > 202500:
-              factor = torch.sqrt(torch.tensor(202500 / (sz[0] * sz[1]), dtype=torch.float32))
-              newH = torch.floor(sz[0] * factor).int()
-              newW = torch.floor(sz[1] * factor).int()
-              image = F.interpolate(image.permute(2, 0, 1).unsqueeze(0), size=(newH, newW), mode='nearest').squeeze(0).permute(1, 2, 0)
+    def rgb_uv_hist(self, image):
+        if image.dim() == 3:
+            sz = image.shape
+            if sz[0] * sz[1] > 202500:
+                factor = torch.sqrt(torch.tensor(202500 / (sz[0] * sz[1]), dtype=torch.float32))
+                newH = torch.floor(sz[0] * factor).int()
+                newW = torch.floor(sz[1] * factor).int()
+                image = F.interpolate(image.permute(2, 0, 1).unsqueeze(0), size=(newH, newW), mode='nearest').squeeze(0).permute(1, 2, 0)
 
-          I_reshaped = image[(image > 0).all(dim=2)]
-          eps = 6.4 / self.h
-          hist = torch.zeros((self.h, self.h, 3), dtype=torch.float32)
-          Iy = torch.norm(I_reshaped, dim=1)
+            I_reshaped = image[(image > 0).all(dim=2)]
+            eps = 6.4 / self.h
+            hist = torch.zeros((self.h, self.h, 3), dtype=torch.float32)
+            Iy = torch.norm(I_reshaped, dim=1)
 
-          for i in range(3):
-              r = [j for j in range(3) if j != i]
-              Iu = torch.log(I_reshaped[:, i] / I_reshaped[:, r[1]])
-              Iv = torch.log(I_reshaped[:, i] / I_reshaped[:, r[0]])
-              hist[:, :, i], _, _ = np.histogram2d(Iu.cpu().numpy(), Iv.cpu().numpy(), bins=self.h, range=[[-3.2 - eps / 2, 3.2 - eps / 2], [-3.2 - eps / 2, 3.2 - eps / 2]], weights=Iy.cpu().numpy())
-              norm_ = hist[:, :, i].sum()
-              hist[:, :, i] = torch.sqrt(hist[:, :, i] / norm_)
+            for i in range(3):
+                r = [j for j in range(3) if j != i]
+                Iu = torch.log(I_reshaped[:, i] / I_reshaped[:, r[1]])
+                Iv = torch.log(I_reshaped[:, i] / I_reshaped[:, r[0]])
+                hist[:, :, i], _, _ = np.histogram2d(Iu.cpu().numpy(), Iv.cpu().numpy(), bins=self.h, range=[[-3.2 - eps / 2, 3.2 - eps / 2], [-3.2 - eps / 2, 3.2 - eps / 2]], weights=Iy.cpu().numpy())
+                norm_ = hist[:, :, i].sum()
+                hist[:, :, i] = torch.sqrt(hist[:, :, i] / norm_)
 
-          return hist
-      else:
-          raise ValueError("Input image must be a 3-dimensional tensor.")
+            return hist
+        else:
+            raise ValueError("Input image must be a 3-dimensional tensor. ")
 
 
     def correctImage(self, image):
