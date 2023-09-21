@@ -49,6 +49,10 @@ from nerfstudio.model_components.shaders import NormalsShader
 from nerfstudio.models.base_model import Model, ModelConfig
 from nerfstudio.utils import colormaps
 
+from classes import WBsRGB as wb_srgb
+
+wbModel = wb_srgb.WBsRGB(gamut_mapping=2,
+                         upgraded=1)
 
 @dataclass
 class NerfactoModelConfig(ModelConfig):
@@ -341,6 +345,7 @@ class NerfactoModel(Model):
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         loss_dict = {}
         image = batch["image"].to(self.device)
+        image= wbModel.correctImage(image)
         pred_rgb, gt_rgb = self.renderer_rgb.blend_background_for_loss_computation(
             pred_image=outputs["rgb"],
             pred_accumulation=outputs["accumulation"],
