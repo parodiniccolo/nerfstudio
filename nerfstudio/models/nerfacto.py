@@ -345,7 +345,7 @@ class NerfactoModel(Model):
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         loss_dict = {}
         image = batch["image"].to(self.device)
-        image= wbModel.correctImage(image)
+        image = wbModel.correctImage(image)
         pred_rgb, gt_rgb = self.renderer_rgb.blend_background_for_loss_computation(
             pred_image=outputs["rgb"],
             pred_accumulation=outputs["accumulation"],
