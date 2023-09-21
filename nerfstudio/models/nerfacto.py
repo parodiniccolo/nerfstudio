@@ -49,7 +49,7 @@ from nerfstudio.model_components.shaders import NormalsShader
 from nerfstudio.models.base_model import Model, ModelConfig
 from nerfstudio.utils import colormaps
 
-from classes import WBsRGB as wb_srgb
+from nerfstudio.models.classes import WBsRGB as wb_srgb
 
 wbModel = wb_srgb.WBsRGB(gamut_mapping=2,
                          upgraded=1)
