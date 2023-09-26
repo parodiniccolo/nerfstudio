@@ -97,6 +97,7 @@ class WBsRGB:
         # Rest of the code as it is
         pixel_i = pixel_i[..., ::-1]  # convert from BGR to RGB
         pixel_i = im2double(pixel_i)  # convert to double
+        print(pixel_i.shape)
 
         # ... (Rest of the code remains unchanged)
         feature = self.encode(self.rgb_uv_hist(pixel_i))
