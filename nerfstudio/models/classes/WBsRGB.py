@@ -93,12 +93,13 @@ class WBsRGB:
 
         # Convert the pixel color values to BGR format
         pixel_i = np.uint8(pixel_i * 255)  # Convert to uint8
-        pixel_i_bgr = cv2.cvtColor(np.array([pixel_i]), cv2.COLOR_RGB2BGR)[0]
+        pixel_i = cv2.cvtColor(np.array([pixel_i]), cv2.COLOR_RGB2BGR)[0]
         # Rest of the code as it is
-        pixel_i_bgr = im2double(pixel_i_bgr)  # convert to double
+        pixel_i = I[..., ::-1]  # convert from BGR to RGB
+        pixel_i = im2double(pixel_i)  # convert to double
 
         # ... (Rest of the code remains unchanged)
-        feature = self.encode(self.rgb_uv_hist(I))
+        feature = self.encode(self.rgb_uv_hist(pixel_i))
         # Do
         # ```python
         # feature_diff = self.features - feature
@@ -121,7 +122,7 @@ class WBsRGB:
         mf = mf.reshape(11, 3, order="F")  # reshape it to be 9 * 3
         I_corr = self.colorCorrection(I, mf)  # apply it!
 
-        pixel_i_corr = self.colorCorrection(pixel_i_bgr, mf)  # apply it!
+        pixel_i_corr = self.colorCorrection(pixel_i, mf)  # apply it!
 
         # Convert BGR pixel back to tensor format
         pixel_i_corr_rgb = cv2.cvtColor(np.array([pixel_i_corr]), cv2.COLOR_BGR2RGB)[0]
