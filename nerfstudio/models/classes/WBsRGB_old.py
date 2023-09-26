@@ -82,54 +82,32 @@ class WBsRGB:
     return hist
 
   def correctImage(self, I):
-    """ White balance a given tensor of shape [4096, 3]. """
-    num_images = I.shape[0]
-    corrected_images = []
+    """ White balance a given image I. """
+    I = I[..., ::-1]  # convert from BGR to RGB
+    I = im2double(I)  # convert to double
+    # Convert I to float32 may speed up the process.
+    feature = self.encode(self.rgb_uv_hist(I))
+    # Do
+    # ```python
+    # feature_diff = self.features - feature
+    # D_sq = np.einsum('ij,ij->i', feature_diff, feature_diff)[:, None]
+    # ```
+    D_sq = np.einsum(
+      'ij, ij ->i', self.features, self.features)[:, None] + np.einsum(
+      'ij, ij ->i', feature, feature) - 2 * self.features.dot(feature.T)
 
-    for i in range(num_images):
-        # Convert the i-th image from tensor to BGR image
-        image_i = I[i].reshape(64, 64, 3)  # Assuming each image is 64x64x3
-        image_i = np.uint8(image_i * 255)  # Convert to uint8
-        image_i = cv2.cvtColor(image_i, cv2.COLOR_RGB2BGR)  # Convert from RGB to BGR
-
-        # Rest of the code as it is
-        image_i = im2double(image_i)  # convert to double
-
-        # ... (Rest of the code remains unchanged)
-        feature = self.encode(self.rgb_uv_hist(I))
-        # Do
-        # ```python
-        # feature_diff = self.features - feature
-        # D_sq = np.einsum('ij,ij->i', feature_diff, feature_diff)[:, None]
-        # ```
-        D_sq = np.einsum(
-          'ij, ij ->i', self.features, self.features)[:, None] + np.einsum(
-          'ij, ij ->i', feature, feature) - 2 * self.features.dot(feature.T)
-
-        # get smallest K distances
-        idH = D_sq.argpartition(self.K, axis=0)[:self.K]
-        mappingFuncs = np.squeeze(self.mappingFuncs[idH, :])
-        dH = np.sqrt(
-          np.take_along_axis(D_sq, idH, axis=0))
-        weightsH = np.exp(-(np.power(dH, 2)) /
-                          (2 * np.power(self.sigma, 2)))  # compute weights
-        weightsH = weightsH / sum(weightsH)  # normalize blending weights
-        mf = sum(np.matlib.repmat(weightsH, 1, 33) *
-                mappingFuncs, 0)  # compute the mapping function
-        mf = mf.reshape(11, 3, order="F")  # reshape it to be 9 * 3
-        I_corr = self.colorCorrection(I, mf)  # apply it!
-
-        image_i_corr = self.colorCorrection(image_i, mf)  # apply it!
-
-        # Convert BGR image back to tensor
-        image_i_corr = cv2.cvtColor(image_i_corr, cv2.COLOR_BGR2RGB)  # Convert from BGR to RGB
-        image_i_corr = image_i_corr / 255.0  # Convert back to float in the range [0, 1]
-        image_i_corr = image_i_corr.reshape(-1)  # Flatten the image
-        corrected_images.append(image_i_corr)
-
-    # Stack the corrected images into a tensor
-    I_corr = np.stack(corrected_images, axis=0)
-
+    # get smallest K distances
+    idH = D_sq.argpartition(self.K, axis=0)[:self.K]
+    mappingFuncs = np.squeeze(self.mappingFuncs[idH, :])
+    dH = np.sqrt(
+      np.take_along_axis(D_sq, idH, axis=0))
+    weightsH = np.exp(-(np.power(dH, 2)) /
+                      (2 * np.power(self.sigma, 2)))  # compute weights
+    weightsH = weightsH / sum(weightsH)  # normalize blending weights
+    mf = sum(np.matlib.repmat(weightsH, 1, 33) *
+             mappingFuncs, 0)  # compute the mapping function
+    mf = mf.reshape(11, 3, order="F")  # reshape it to be 9 * 3
+    I_corr = self.colorCorrection(I, mf)  # apply it!
     return I_corr
 
   def colorCorrection(self, input, m):
