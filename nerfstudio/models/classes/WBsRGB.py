@@ -82,23 +82,6 @@ class WBsRGB:
     return hist
 
 
-def correctImage(self, I):
-    """ White balance a given tensor of shape [4096, 3]. """
-    num_images = I.shape[0]
-    corrected_images = []
-
-
-
-
-        # ... (Rest of the code remains unchanged)
-
-
-    # Stack the corrected pixels into a tensor
-    I_corr = np.stack(corrected_images, axis=0)
-
-    return I_corr
-
-
   def correctImage(self, I):
     """ White balance a given tensor of shape [4096, 3]. """
     num_images = I.shape[0]
