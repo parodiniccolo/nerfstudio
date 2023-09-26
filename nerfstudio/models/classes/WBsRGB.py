@@ -89,7 +89,7 @@ class WBsRGB:
 
     for i in range(num_images):
         # Extract the i-th pixel color values
-        pixel_i = I[i]
+        pixel_i = I[i].cpu().numpy() 
 
         # Convert the pixel color values to BGR format
         pixel_i = np.uint8(pixel_i * 255)  # Convert to uint8
