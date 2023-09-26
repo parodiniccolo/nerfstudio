@@ -81,19 +81,38 @@ class WBsRGB:
       hist[:, :, i] = np.sqrt(hist[:, :, i] / norm_)  # (hist/norm)^(1/2)
     return hist
 
+
+def correctImage(self, I):
+    """ White balance a given tensor of shape [4096, 3]. """
+    num_images = I.shape[0]
+    corrected_images = []
+
+
+
+
+        # ... (Rest of the code remains unchanged)
+
+
+    # Stack the corrected pixels into a tensor
+    I_corr = np.stack(corrected_images, axis=0)
+
+    return I_corr
+
+
   def correctImage(self, I):
     """ White balance a given tensor of shape [4096, 3]. """
     num_images = I.shape[0]
     corrected_images = []
 
     for i in range(num_images):
-        # Convert the i-th image from tensor to BGR image
-        image_i = I[i].reshape(64, 64, 3)  # Assuming each image is 64x64x3
-        image_i = np.uint8(image_i * 255)  # Convert to uint8
-        image_i = cv2.cvtColor(image_i, cv2.COLOR_RGB2BGR)  # Convert from RGB to BGR
+        # Extract the i-th pixel color values
+        pixel_i = I[i]
 
+        # Convert the pixel color values to BGR format
+        pixel_i = np.uint8(pixel_i * 255)  # Convert to uint8
+        pixel_i_bgr = cv2.cvtColor(np.array([pixel_i]), cv2.COLOR_RGB2BGR)[0]
         # Rest of the code as it is
-        image_i = im2double(image_i)  # convert to double
+        pixel_i_bgr = im2double(pixel_i_bgr)  # convert to double
 
         # ... (Rest of the code remains unchanged)
         feature = self.encode(self.rgb_uv_hist(I))
@@ -119,13 +138,12 @@ class WBsRGB:
         mf = mf.reshape(11, 3, order="F")  # reshape it to be 9 * 3
         I_corr = self.colorCorrection(I, mf)  # apply it!
 
-        image_i_corr = self.colorCorrection(image_i, mf)  # apply it!
+        pixel_i_corr = self.colorCorrection(pixel_i_bgr, mf)  # apply it!
 
-        # Convert BGR image back to tensor
-        image_i_corr = cv2.cvtColor(image_i_corr, cv2.COLOR_BGR2RGB)  # Convert from BGR to RGB
-        image_i_corr = image_i_corr / 255.0  # Convert back to float in the range [0, 1]
-        image_i_corr = image_i_corr.reshape(-1)  # Flatten the image
-        corrected_images.append(image_i_corr)
+        # Convert BGR pixel back to tensor format
+        pixel_i_corr_rgb = cv2.cvtColor(np.array([pixel_i_corr]), cv2.COLOR_BGR2RGB)[0]
+        pixel_i_corr_tensor = pixel_i_corr_rgb / 255.0  # Convert back to float in the range [0, 1]
+        corrected_images.append(pixel_i_corr_tensor)
 
     # Stack the corrected images into a tensor
     I_corr = np.stack(corrected_images, axis=0)
