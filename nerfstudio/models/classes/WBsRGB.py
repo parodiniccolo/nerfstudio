@@ -95,7 +95,7 @@ class WBsRGB:
         pixel_i = np.uint8(pixel_i * 255)  # Convert to uint8
         pixel_i = cv2.cvtColor(np.array([pixel_i]), cv2.COLOR_RGB2BGR)[0]
         # Rest of the code as it is
-        pixel_i = I[..., ::-1]  # convert from BGR to RGB
+        pixel_i = pixel_i[..., ::-1]  # convert from BGR to RGB
         pixel_i = im2double(pixel_i)  # convert to double
 
         # ... (Rest of the code remains unchanged)
