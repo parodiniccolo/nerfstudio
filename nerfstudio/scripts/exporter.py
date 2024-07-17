@@ -157,6 +157,7 @@ class ExportPointCloud(Exporter):
             normal_output_name=self.normal_output_name if self.normal_method == "model_output" else None,
             crop_obb=crop_obb,
             std_ratio=self.std_ratio,
+            output_dir=self.output_dir,
         )
         if self.save_world_frame:
             # apply the inverse dataparser transform to the point cloud
