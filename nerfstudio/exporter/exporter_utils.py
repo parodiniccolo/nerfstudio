@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 import numpy as np
 import pymeshlab
 import torch
+import h5py
 from jaxtyping import Float
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
 from torch import Tensor
@@ -91,6 +92,7 @@ def generate_point_cloud(
     normal_output_name: Optional[str] = None,
     crop_obb: Optional[OrientedBox] = None,
     std_ratio: float = 10.0,
+    output_dir="out",
 ) -> o3d.geometry.PointCloud:
     """Generate a point cloud from a nerf.
 
@@ -108,7 +110,7 @@ def generate_point_cloud(
     Returns:
         Point cloud.
     """
-
+    use_bounding_box = False
     progress = Progress(
         TextColumn(":cloud: Computing Point Cloud :cloud:"),
         BarColumn(),
@@ -116,9 +118,12 @@ def generate_point_cloud(
         TimeRemainingColumn(elapsed_when_finished=True, compact=True),
         console=CONSOLE,
     )
-    points = []
+    origins = [] #added
+    directions = [] #added
+    points = [] 
     rgbs = []
     normals = []
+    clips = [] #added
     view_directions = []
     with progress as progress_bar:
         task = progress_bar.add_task("Generating Point Cloud", total=num_points)
@@ -128,7 +133,7 @@ def generate_point_cloud(
             with torch.no_grad():
                 ray_bundle, _ = pipeline.datamanager.next_train(0)
                 assert isinstance(ray_bundle, RayBundle)
-                outputs = pipeline.model(ray_bundle)
+                outputs, clip_embeddings = pipeline.model(ray_bundle)
             if rgb_output_name not in outputs:
                 CONSOLE.rule("Error", style="red")
                 CONSOLE.print(f"Could not find {rgb_output_name} in the model outputs", justify="center")
@@ -141,6 +146,7 @@ def generate_point_cloud(
                 sys.exit(1)
             rgba = pipeline.model.get_rgba_image(outputs, rgb_output_name)
             depth = outputs[depth_output_name]
+            clip = clip_embeddings
             if normal_output_name is not None:
                 if normal_output_name not in outputs:
                     CONSOLE.rule("Error", style="red")
@@ -152,7 +158,10 @@ def generate_point_cloud(
                     torch.min(normal) >= 0.0 and torch.max(normal) <= 1.0
                 ), "Normal values from method output must be in [0, 1]"
                 normal = (normal * 2.0) - 1.0
-            point = ray_bundle.origins + ray_bundle.directions * depth
+            origin = ray_bundle.origins #added 
+            direction = ray_bundle.directions #added
+            point = origin + direction * depth
+
             view_direction = ray_bundle.directions
 
             # Filter points with opacity lower than 0.5
@@ -173,13 +182,53 @@ def generate_point_cloud(
 
             points.append(point)
             rgbs.append(rgb)
+            origins.append(origin)
+            clips.append(clip)
+            directions.append(direction)
             view_directions.append(view_direction)
             if normal is not None:
                 normals.append(normal)
             progress.advance(task, point.shape[0])
     points = torch.cat(points, dim=0)
     rgbs = torch.cat(rgbs, dim=0)
+    origins = torch.cat(origins, dim=0)
+    directions = torch.cat(directions, dim=0)
+    clips = [torch.unsqueeze(clip, dim=0) for clip in clips]
+    clips = torch.cat(clips, dim=0)
     view_directions = torch.cat(view_directions, dim=0).cpu()
+
+    # Create an HDF5 file
+    # Change the directory to the location of data.h5
+    CONSOLE.print("Saving H5 file...")
+    hdf5_file = h5py.File(f"{output_dir}/embeddings_v2.h5", "w")
+    # Create the "points" group
+    points_group = hdf5_file.create_group("points")
+    # Create the "origins" group
+    origins_group = hdf5_file.create_group("origins")
+    # Create the "directions" group
+    directions_group = hdf5_file.create_group("directions")
+    # Create the "clip" group
+    clip_group = hdf5_file.create_group("clip")
+    # Create the "rgb" group
+    rgb_group = hdf5_file.create_group("rgb")
+
+    points_group.create_dataset("points", data=points.detach().cpu().numpy())
+    origins_group.create_dataset("origins", data=origins.detach().cpu().numpy())
+    directions_group.create_dataset("directions", data=directions.detach().cpu().numpy())
+
+
+    rgb_group.create_dataset("rgb", data=rgbs.detach().cpu().numpy())
+    for scale in range(30):
+        clip_data = clips[:, :, scale, :].view(-1, 1, 512)
+        clip_data = torch.squeeze(clip_data, dim=1)
+
+        clip_group.create_dataset(
+            f"scale_{scale}", data=clip_data.detach().cpu().numpy()
+        )
+
+    hdf5_file.close()
+    CONSOLE.print("Done saving H5 file...")
+
 
     import open3d as o3d
 

@@ -79,7 +79,8 @@ def validate_pipeline(normal_method: str, normal_output_name: str, pipeline: Pip
         outputs = pipeline.model(ray_bundle)
         if normal_output_name not in outputs:
             CONSOLE.print(f"[bold yellow]Warning: Normal output '{normal_output_name}' not found in pipeline outputs.")
-            CONSOLE.print(f"Available outputs: {list(outputs.keys())}")
+            CONSOLE.print(f"Available outputs: {outputs}")
+            CONSOLE.print(f"Available outputs: {list(outputs[0].keys())}")
             CONSOLE.print(
                 "[bold yellow]Warning: Please train a model with normals "
                 "(e.g., nerfacto with predicted normals turned on)."
